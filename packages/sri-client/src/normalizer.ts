@@ -115,12 +115,6 @@ export const normalizeSriResponse = (accessKey: string, response: unknown): SriQ
     readPath(response, ['EstadoAutorizacionComprobante']) ??
     response;
 
-  const autorizaciones = toArray(
-    readPath(envelope, ['autorizaciones', 'autorizacion']) ??
-      readPath(envelope, ['autorizaciones']) ??
-      readPath(envelope, ['autorizacion']),
-  ).filter((entry) => asRecord(entry) !== null);
-
   const base = {
     accessKey,
     documentType: extractDocumentType(accessKey),
@@ -128,9 +122,30 @@ export const normalizeSriResponse = (accessKey: string, response: unknown): SriQ
     raw: response,
   };
 
-  const declaredCount = Number(toText(firstDefined(envelope, ['numeroComprobantes'])) ?? '0');
+  // El SRI expone dos formas de respuesta segun el servicio/ambiente:
+  //  A) recepcion/autorizacion : autorizaciones.autorizacion[] (estado, ambiente, mensajes...)
+  //  B) ConsultaComprobante    : estadoAutorizacion plano en el propio EstadoAutorizacionComprobante
+  // Se aceptan ambas para no depender de un unico formato.
+  const autorizaciones = toArray(
+    readPath(envelope, ['autorizaciones', 'autorizacion']) ??
+      readPath(envelope, ['autorizaciones']) ??
+      readPath(envelope, ['autorizacion']),
+  ).filter((entry) => asRecord(entry) !== null);
 
-  if (autorizaciones.length === 0 || declaredCount === 0) {
+  const candidates = autorizaciones.map((entry) => {
+    const sriStatusRaw = toText(firstDefined(entry, ['estado', 'estadoAutorizacion']));
+    return { entry, sriStatusRaw, status: mapSriStatus(sriStatusRaw) };
+  });
+
+  // Estructura B: sin lista de autorizaciones, pero con el estado plano en el envelope.
+  if (candidates.length === 0) {
+    const flatStatus = toText(firstDefined(envelope, ['estadoAutorizacion', 'estado']));
+    if (flatStatus) {
+      candidates.push({ entry: envelope, sriStatusRaw: flatStatus, status: mapSriStatus(flatStatus) });
+    }
+  }
+
+  if (candidates.length === 0) {
     return {
       ...base,
       status: 'not_found',
@@ -146,15 +161,6 @@ export const normalizeSriResponse = (accessKey: string, response: unknown): SriQ
 
   // Cuando hay varias autorizaciones se prioriza la mas relevante para el usuario.
   const priority: ItemStatus[] = ['annulled', 'pending_annulment', 'authorized', 'not_authorized'];
-  const candidates = autorizaciones.map((entry) => {
-    const sriStatusRaw = toText(firstDefined(entry, ['estado', 'estadoAutorizacion']));
-    return {
-      entry,
-      sriStatusRaw,
-      status: mapSriStatus(sriStatusRaw),
-    };
-  });
-
   const chosen =
     priority
       .map((status) => candidates.find((candidate) => candidate.status === status))

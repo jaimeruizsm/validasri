@@ -137,4 +137,36 @@ describe('normalizeSriResponse', () => {
     expect(result.status).toBe('authorized');
     expect(result.authorizationDate).toBeNull();
   });
+
+  // Estructura real del servicio ConsultaComprobante de produccion: el estado
+  // viene plano en EstadoAutorizacionComprobante, sin lista autorizaciones.
+  describe('respuesta plana de ConsultaComprobante (produccion)', () => {
+    const consultaResponse = (estadoAutorizacion: string | null) => ({
+      EstadoAutorizacionComprobante: {
+        claveAcceso: KEY,
+        estadoAutorizacion,
+        rucEmisor: '0990637679001',
+        tipoComprobante: 'Comprobante de Retencion',
+        fechaAutorizacion: '2026-07-07T21:13:26.000Z',
+        mensajes: null,
+      },
+    });
+
+    it('normaliza un comprobante autorizado con la estructura plana', () => {
+      const result = normalizeSriResponse(KEY, consultaResponse('AUTORIZADO'));
+      expect(result.status).toBe('authorized');
+      expect(result.sriStatusRaw).toBe('AUTORIZADO');
+      expect(result.authorizationDate).toBe('2026-07-07T21:13:26.000Z');
+    });
+
+    it('normaliza un comprobante no autorizado con la estructura plana', () => {
+      expect(normalizeSriResponse(KEY, consultaResponse('NO AUTORIZADO')).status).toBe(
+        'not_authorized',
+      );
+    });
+
+    it('marca not_found cuando el estado plano viene vacio', () => {
+      expect(normalizeSriResponse(KEY, consultaResponse(null)).status).toBe('not_found');
+    });
+  });
 });
