@@ -1,0 +1,16 @@
+{
+  "name": "@validasri/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "process-once": "tsx src/index.ts --once"
+  },
+  "dependencies": {
+    "@validasri/database": "*",
+    "@validasri/shared": "*",
+    "@validasri/sri-client": "*"
+  }
+}

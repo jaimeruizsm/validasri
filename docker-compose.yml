@@ -1,0 +1,30 @@
+# Orquestacion del worker de ValidaSRI.
+#
+# La aplicacion web se despliega en Vercel; aqui se ejecuta el worker que
+# procesa los lotes en segundo plano. En modo Supabase el worker se conecta a la
+# base de datos gestionada, por lo que no necesita un Postgres local.
+#
+#   docker compose up --build
+#
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATA_PROVIDER: ${DATA_PROVIDER:-supabase}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SRI_PROVIDER: ${SRI_PROVIDER:-soap}
+      SRI_ENVIRONMENT: ${SRI_ENVIRONMENT:-test}
+      SRI_TEST_WSDL_URL: ${SRI_TEST_WSDL_URL:-}
+      SRI_PRODUCTION_WSDL_URL: ${SRI_PRODUCTION_WSDL_URL:-}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+      SRI_REQUEST_TIMEOUT_MS: ${SRI_REQUEST_TIMEOUT_MS:-20000}
+      SRI_MAX_RETRIES: ${SRI_MAX_RETRIES:-3}
+      SRI_REQUEST_DELAY_MS: ${SRI_REQUEST_DELAY_MS:-500}
+      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-3000}
+      WORKER_CLAIM_SIZE: ${WORKER_CLAIM_SIZE:-25}
+      WORKER_LOCK_TIMEOUT_MS: ${WORKER_LOCK_TIMEOUT_MS:-120000}

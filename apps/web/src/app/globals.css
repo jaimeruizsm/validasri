@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+
+/*
+ * Tema empresarial de ValidaSRI.
+ * Fondo gris muy claro, tarjetas blancas, primario azul oscuro, y colores
+ * semanticos: verde (autorizado), rojo (error/anulado), ambar (advertencia).
+ */
+@theme {
+  --color-background: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-600: #1e40af;
+  --color-brand-700: #1e3a8a;
+  --color-brand-800: #172554;
+
+  --color-success: #16a34a;
+  --color-success-bg: #dcfce7;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fee2e2;
+  --color-warning: #d97706;
+  --color-warning-bg: #fef3c7;
+  --color-info: #0369a1;
+  --color-info-bg: #e0f2fe;
+
+  --radius: 0.625rem;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html,
+body {
+  background-color: var(--color-background);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}

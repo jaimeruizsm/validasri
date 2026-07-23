@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "ignoreDeprecations": "5.0",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": {
+      "@validasri/shared": ["./packages/shared/src/index.ts"],
+      "@validasri/shared/*": ["./packages/shared/src/*"],
+      "@validasri/validation": ["./packages/validation/src/index.ts"],
+      "@validasri/validation/*": ["./packages/validation/src/*"],
+      "@validasri/sri-client": ["./packages/sri-client/src/index.ts"],
+      "@validasri/sri-client/*": ["./packages/sri-client/src/*"],
+      "@validasri/database": ["./packages/database/src/index.ts"],
+      "@validasri/database/*": ["./packages/database/src/*"],
+      "@validasri/export": ["./packages/export/src/index.ts"],
+      "@validasri/export/*": ["./packages/export/src/*"]
+    }
+  }
+}
