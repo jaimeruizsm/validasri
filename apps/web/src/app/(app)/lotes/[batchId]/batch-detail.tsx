@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Download, Loader2, RefreshCcwDot, RefreshCw, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,11 +29,12 @@ import {
 import { PageHeader } from '@/components/page-header';
 import { ProgressBar } from '@/components/progress-bar';
 import { BatchStatusBadge, ItemStatusBadge } from '@/components/status-badge';
-import { exportCsvLocally, fetchAllBatchItems } from '@/lib/batch-export';
+import { exportCsvLocally, exportXlsxLocally, fetchAllBatchItems } from '@/lib/batch-export';
 import { ResultsTable } from './results-table';
 
 const PAGE_SIZE = 25;
-const POLL_INTERVAL_MS = 3_000;
+// 10 s en vez de 3 s para reducir invocaciones de funciones serverless en Vercel.
+const POLL_INTERVAL_MS = 10_000;
 
 interface ItemsResponse {
   batch: ValidationBatch;
@@ -53,6 +54,7 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
   const [revalidating, setRevalidating] = useState(false);
   const [revalidateOpen, setRevalidateOpen] = useState(false);
   const [csvBusy, setCsvBusy] = useState(false);
+  const [xlsxBusy, setXlsxBusy] = useState(false);
   const allItemsRef = useRef<ValidationItem[] | null>(null);
   const [errorDetail, setErrorDetail] = useState<ValidationItem | null>(null);
 
@@ -99,11 +101,37 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
     void fetchItems();
   }, [fetchItems]);
 
-  // Polling del progreso mientras el lote no ha terminado.
+  // Polling del progreso mientras el lote no ha terminado. Se pausa cuando la
+  // pestaña esta en segundo plano (Page Visibility API) para no gastar CPU de
+  // Vercel innecesariamente: si el usuario no esta mirando, no se consulta.
   useEffect(() => {
     if (isFinished) return;
-    const timer = setInterval(() => void fetchItems(), POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
+
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const start = () => {
+      if (timer) return;
+      timer = setInterval(() => void fetchItems(), POLL_INTERVAL_MS);
+    };
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+    };
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        void fetchItems(); // refresco inmediato al volver a la pestana
+        start();
+      }
+    };
+
+    if (!document.hidden) start();
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchItems, isFinished]);
 
   const copyKey = useCallback(async (accessKey: string) => {
@@ -152,21 +180,34 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
     }
   };
 
-  // Descarga el CSV generado en el navegador desde la cache local (IndexedDB),
-  // con todos los detalles y respetando los filtros activos.
+  // Descargas generadas en el navegador desde la cache local (IndexedDB), con
+  // todos los detalles y respetando los filtros activos. No pasan por el servidor.
+  const ensureAllItems = async (): Promise<ValidationItem[]> => {
+    const items = allItemsRef.current ?? (await fetchAllBatchItems(initialBatch.id));
+    allItemsRef.current = items;
+    return items;
+  };
+  const filters = { search: debouncedSearch, status: statusFilter };
+
   const downloadCsvLocal = async () => {
     setCsvBusy(true);
     try {
-      const items = allItemsRef.current ?? (await fetchAllBatchItems(initialBatch.id));
-      allItemsRef.current = items;
-      exportCsvLocally(batch.originalFilename, items, {
-        search: debouncedSearch,
-        status: statusFilter,
-      });
+      exportCsvLocally(batch.originalFilename, await ensureAllItems(), filters);
     } catch {
       toast.error('No se pudo generar el CSV.');
     } finally {
       setCsvBusy(false);
+    }
+  };
+
+  const downloadXlsxLocal = async () => {
+    setXlsxBusy(true);
+    try {
+      await exportXlsxLocally(batch, await ensureAllItems(), filters);
+    } catch {
+      toast.error('No se pudo generar el Excel.');
+    } finally {
+      setXlsxBusy(false);
     }
   };
 
@@ -182,12 +223,6 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
     };
   }, [isFinished, initialBatch.id]);
 
-  const excelUrl = useMemo(() => {
-    const params = new URLSearchParams({ format: 'xlsx' });
-    if (debouncedSearch) params.set('search', debouncedSearch);
-    if (statusFilter) params.set('status', statusFilter);
-    return `/api/lotes/${initialBatch.id}/export?${params.toString()}`;
-  }, [debouncedSearch, initialBatch.id, statusFilter]);
 
   const errorCount = counts.service_error ?? 0;
 
@@ -227,11 +262,9 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
                 Volver a validar todo
               </Button>
             )}
-            <Button variant="outline" size="sm" asChild>
-              <a href={excelUrl}>
-                <Download className="h-4 w-4" />
-                Excel
-              </a>
+            <Button variant="outline" size="sm" onClick={downloadXlsxLocal} disabled={xlsxBusy}>
+              <Download className={xlsxBusy ? 'h-4 w-4 animate-pulse' : 'h-4 w-4'} />
+              Excel
             </Button>
             <Button variant="outline" size="sm" onClick={downloadCsvLocal} disabled={csvBusy}>
               <Download className={csvBusy ? 'h-4 w-4 animate-pulse' : 'h-4 w-4'} />

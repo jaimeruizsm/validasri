@@ -1,6 +1,6 @@
 'use client';
 
-import type { ItemStatus, Paginated, ValidationItem } from '@validasri/shared';
+import type { ItemStatus, Paginated, ValidationBatch, ValidationItem } from '@validasri/shared';
 import { buildCsv } from '@validasri/export/csv';
 import { loadBatchItems, saveBatchItems } from './local-cache';
 
@@ -79,5 +79,28 @@ export const exportCsvLocally = (
   triggerDownload(
     new Blob([buildCsv(filtered)], { type: 'text/csv;charset=utf-8' }),
     `${base}-resultados.csv`,
+  );
+};
+
+/**
+ * Genera y descarga el Excel en el navegador desde la cache local. ExcelJS se
+ * importa dinamicamente (solo al exportar) para no cargarlo en el bundle inicial
+ * ni ejecutarlo en el servidor de Vercel.
+ */
+export const exportXlsxLocally = async (
+  batch: ValidationBatch,
+  items: ValidationItem[],
+  filters: { search?: string; status?: ItemStatus | '' },
+): Promise<void> => {
+  const filtered = applyFilters(items, filters);
+  const { buildXlsx, exportFilename } = await import('@validasri/export');
+  const data = await buildXlsx(batch, filtered);
+  // Cast a BlobPart: el Uint8Array es un binario valido; la discrepancia es solo
+  // de tipos entre ArrayBufferLike y ArrayBuffer en lib.dom.
+  triggerDownload(
+    new Blob([data as unknown as BlobPart], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }),
+    exportFilename(batch.originalFilename, 'xlsx'),
   );
 };

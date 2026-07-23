@@ -8,10 +8,14 @@ import { buildSummary, EXPORT_HEADERS, toExportRow } from './rows';
  * La clave de acceso se escribe como texto explicito (celda con `numFmt '@'`)
  * para que Excel nunca la convierta a notacion cientifica.
  */
+/**
+ * Devuelve un `Uint8Array` (no `Buffer`) para poder generar el Excel tanto en el
+ * servidor (Node) como en el navegador, donde `Buffer` no existe.
+ */
 export const buildXlsx = async (
   batch: ValidationBatch,
   items: ValidationItem[],
-): Promise<Buffer> => {
+): Promise<Uint8Array> => {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = APP_NAME;
   workbook.created = new Date();
@@ -64,5 +68,5 @@ export const buildXlsx = async (
   disclaimerRow.getCell('label').font = { italic: true };
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();
-  return Buffer.from(arrayBuffer);
+  return new Uint8Array(arrayBuffer);
 };
