@@ -6,6 +6,10 @@
 #
 #   docker compose up --build
 #
+# Nombre de proyecto propio: aisla por completo este stack de cualquier otro que
+# ya corra en el VPS (p. ej. n8n). Nunca comparte contenedores, red ni volumenes.
+name: validasri
+
 services:
   worker:
     build:

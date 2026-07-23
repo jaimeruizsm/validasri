@@ -67,6 +67,21 @@ El repositorio git ya esta inicializado con el primer commit. Falta crear el rep
 
 El worker necesita estar **siempre encendido**. Se despliega con el `docker-compose.yml` de este repositorio.
 
+### Convivencia con n8n (u otros proyectos Docker del VPS) — importante
+
+Este worker **no afecta** a tu n8n existente:
+
+- Vive en su **propia carpeta** (`validasri`) y su propio proyecto Docker (`name: validasri`).
+  Los comandos `docker compose` **solo** actuan sobre los contenedores de la carpeta donde los
+  ejecutas: pararse en `validasri/` nunca toca los contenedores de n8n.
+- **No abre ningun puerto** (el worker solo hace llamadas salientes a Supabase y al SRI), asi que
+  no puede chocar con el puerto de n8n.
+- Reglas de oro para no romper nada:
+  - Ejecuta los comandos Docker **siempre dentro de la carpeta `validasri`**.
+  - Usa `docker compose up -d` / `logs` / `down` (que solo afectan a este proyecto).
+  - **Nunca** uses `docker system prune -a` ni `docker compose down` fuera de esta carpeta:
+    esos si podrian afectar a otros contenedores.
+
 ### Opcion A — SSH + Docker Compose (funciona en cualquier VPS)
 
 1. Conectate a tu VPS por SSH (desde hPanel de Hostinger obtienes IP y credenciales):
