@@ -35,6 +35,9 @@
       ],
       "@validasri/export": [
         "../../packages/export/src/index.ts"
+      ],
+      "@validasri/export/*": [
+        "../../packages/export/src/*.ts"
       ]
     },
     "allowJs": true

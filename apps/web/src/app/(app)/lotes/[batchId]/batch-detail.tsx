@@ -29,6 +29,7 @@ import {
 import { PageHeader } from '@/components/page-header';
 import { ProgressBar } from '@/components/progress-bar';
 import { BatchStatusBadge, ItemStatusBadge } from '@/components/status-badge';
+import { exportCsvLocally, fetchAllBatchItems } from '@/lib/batch-export';
 import { ResultsTable } from './results-table';
 
 const PAGE_SIZE = 25;
@@ -51,6 +52,8 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
   const [retrying, setRetrying] = useState(false);
   const [revalidating, setRevalidating] = useState(false);
   const [revalidateOpen, setRevalidateOpen] = useState(false);
+  const [csvBusy, setCsvBusy] = useState(false);
+  const allItemsRef = useRef<ValidationItem[] | null>(null);
   const [errorDetail, setErrorDetail] = useState<ValidationItem | null>(null);
 
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -123,6 +126,7 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
       } else {
         toast.info('No hay consultas fallidas para reintentar.');
       }
+      allItemsRef.current = null; // la cache local quedo obsoleta
       await fetchItems();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al reintentar.');
@@ -139,6 +143,7 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
       if (!response.ok) throw new Error(data.error ?? 'No se pudo re-validar el lote.');
       toast.success(`Se reencolaron ${data.requeued ?? 0} comprobantes para volver a consultar.`);
       setRevalidateOpen(false);
+      allItemsRef.current = null; // la cache local quedo obsoleta
       await fetchItems();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al re-validar.');
@@ -147,13 +152,41 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
     }
   };
 
-  const exportUrl = useMemo(() => {
-    return (format: 'xlsx' | 'csv') => {
-      const params = new URLSearchParams({ format });
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      if (statusFilter) params.set('status', statusFilter);
-      return `/api/lotes/${initialBatch.id}/export?${params.toString()}`;
+  // Descarga el CSV generado en el navegador desde la cache local (IndexedDB),
+  // con todos los detalles y respetando los filtros activos.
+  const downloadCsvLocal = async () => {
+    setCsvBusy(true);
+    try {
+      const items = allItemsRef.current ?? (await fetchAllBatchItems(initialBatch.id));
+      allItemsRef.current = items;
+      exportCsvLocally(batch.originalFilename, items, {
+        search: debouncedSearch,
+        status: statusFilter,
+      });
+    } catch {
+      toast.error('No se pudo generar el CSV.');
+    } finally {
+      setCsvBusy(false);
+    }
+  };
+
+  // Al terminar el lote, se descargan todos los items a la cache local una vez.
+  useEffect(() => {
+    if (!isFinished) return;
+    let active = true;
+    void fetchAllBatchItems(initialBatch.id).then((items) => {
+      if (active) allItemsRef.current = items;
+    });
+    return () => {
+      active = false;
     };
+  }, [isFinished, initialBatch.id]);
+
+  const excelUrl = useMemo(() => {
+    const params = new URLSearchParams({ format: 'xlsx' });
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (statusFilter) params.set('status', statusFilter);
+    return `/api/lotes/${initialBatch.id}/export?${params.toString()}`;
   }, [debouncedSearch, initialBatch.id, statusFilter]);
 
   const errorCount = counts.service_error ?? 0;
@@ -195,16 +228,14 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
               </Button>
             )}
             <Button variant="outline" size="sm" asChild>
-              <a href={exportUrl('xlsx')}>
+              <a href={excelUrl}>
                 <Download className="h-4 w-4" />
                 Excel
               </a>
             </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={exportUrl('csv')}>
-                <Download className="h-4 w-4" />
-                CSV
-              </a>
+            <Button variant="outline" size="sm" onClick={downloadCsvLocal} disabled={csvBusy}>
+              <Download className={csvBusy ? 'h-4 w-4 animate-pulse' : 'h-4 w-4'} />
+              CSV
             </Button>
           </div>
         }

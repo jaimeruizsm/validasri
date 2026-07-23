@@ -62,6 +62,29 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T
   }
 };
 
+/**
+ * Elimina el XML del comprobante (campo `comprobante`, ~10 KB) de la respuesta
+ * cruda antes de guardarla. Los datos utiles ya se extrajeron a columnas propias;
+ * el XML completo no se persiste para mantener liviana la base de datos.
+ */
+const stripComprobanteXml = (raw: unknown): unknown => {
+  const clone = JSON.parse(JSON.stringify(raw ?? null)) as unknown;
+  const strip = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      node.forEach(strip);
+      return;
+    }
+    if (typeof node !== 'object' || node === null) return;
+    const record = node as Record<string, unknown>;
+    if (typeof record['comprobante'] === 'string') {
+      record['comprobante'] = '[omitido]';
+    }
+    Object.values(record).forEach(strip);
+  };
+  strip(clone);
+  return clone;
+};
+
 export class SoapSriProvider implements SriProvider {
   readonly name = 'soap';
 
@@ -106,8 +129,10 @@ export class SoapSriProvider implements SriProvider {
         this.options.timeoutMs,
       );
       const payload = Array.isArray(result) ? result[0] : result;
-      // Se conserva la respuesta completa (incluido el XML del comprobante).
-      return normalizeSriResponse(accessKey, payload);
+      // Los campos utiles (razon social, importe...) ya se extrajeron; el XML
+      // pesado NO se persiste (se descarta para no ocupar espacio en la base).
+      const normalized = normalizeSriResponse(accessKey, payload);
+      return { ...normalized, raw: stripComprobanteXml(payload) };
     } catch (error) {
       // El contexto adjunto lleva la clave enmascarada: nunca la clave completa.
       const classified = classifyTransportError(error);

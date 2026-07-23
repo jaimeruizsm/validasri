@@ -136,10 +136,12 @@ describe('SoapSriProvider', () => {
     });
 
     const result = await provider.consultarComprobante(KEY);
+    // Los campos se extraen del XML...
     expect(result.issuerName).toBe('ACME S.A.');
     expect(result.totalAmount).toBe('42.50');
-    // El XML completo se conserva en la respuesta cruda.
-    expect(JSON.stringify(result.raw)).toContain('razonSocial');
+    // ...pero el XML pesado NO se persiste en la respuesta cruda.
+    expect(JSON.stringify(result.raw)).not.toContain('ACME S.A.');
+    expect(JSON.stringify(result.raw)).toContain('[omitido]');
   });
 
   it('convierte un fallo de red en un error temporal enmascarando la clave', async () => {

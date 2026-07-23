@@ -20,7 +20,7 @@ const email = process.env['SEED_EMAIL'] ?? 'demo@validasri.ec';
 const password = process.env['SEED_PASSWORD'] ?? 'ValidaSRI2026';
 const orgName = process.env['SEED_ORG_NAME'] ?? 'Empresa Demostracion';
 const orgRuc = process.env['SEED_ORG_RUC'] ?? '0991234567001';
-const planInput = process.env['SEED_ORG_PLAN'] ?? 'profesional';
+const planInput = process.env['SEED_ORG_PLAN'] ?? 'basico';
 const plan = isPlan(planInput) ? planInput : 'profesional';
 
 const fail = (message: string): never => {

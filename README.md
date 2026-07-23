@@ -255,6 +255,11 @@ El driver `supabase` esta **implementado**. Para operar sobre Supabase:
   por un store compartido.
 - El progreso del detalle del lote se actualiza por *polling* cada 3 s (no se usa Realtime de
   Supabase todavia).
+- Para no llenar la base de datos, el **XML completo del comprobante no se guarda** en Supabase:
+  solo se persisten los campos utiles (razon social, nombre comercial, importe total). Los
+  resultados se cachean ademas en el navegador (IndexedDB) y el CSV se genera localmente desde esa
+  cache. El Excel se genera en el servidor. Limite por defecto: 500 claves por archivo y 500
+  validaciones al mes.
 - La sesion del modo Supabase dura 12 h (tabla `app_sessions`); no hay refresco automatico.
 - En modo local no hay envio real de correo para la recuperacion de contrasena.
 - `node:sqlite` es una API experimental de Node; se usa solo para el modo local/demostracion.
