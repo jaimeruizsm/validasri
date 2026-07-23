@@ -89,3 +89,14 @@ export const retryBatchFailures = async (
   if (!batch) throw forbidden('El lote no existe o no pertenece a tu organizacion.');
   return repository.retryFailedItems(context.organization.id, batchId);
 };
+
+/** Re-consulta TODOS los comprobantes del lote (no solo los fallidos). */
+export const revalidateBatch = async (
+  context: SessionContext,
+  batchId: string,
+): Promise<number> => {
+  const repository = getRepository();
+  const batch = await repository.getBatch(context.organization.id, batchId);
+  if (!batch) throw forbidden('El lote no existe o no pertenece a tu organizacion.');
+  return repository.revalidateBatch(context.organization.id, batchId);
+};

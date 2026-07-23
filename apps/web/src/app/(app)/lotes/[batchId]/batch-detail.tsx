@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Download, RefreshCw, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, RefreshCcwDot, RefreshCw, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   computeBatchProgress,
@@ -49,6 +49,8 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
   const [statusFilter, setStatusFilter] = useState<ItemStatus | ''>('');
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [revalidating, setRevalidating] = useState(false);
+  const [revalidateOpen, setRevalidateOpen] = useState(false);
   const [errorDetail, setErrorDetail] = useState<ValidationItem | null>(null);
 
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -129,6 +131,22 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
     }
   };
 
+  const revalidateAll = async () => {
+    setRevalidating(true);
+    try {
+      const response = await fetch(`/api/lotes/${initialBatch.id}/revalidate`, { method: 'POST' });
+      const data = (await response.json()) as { requeued?: number; error?: string };
+      if (!response.ok) throw new Error(data.error ?? 'No se pudo re-validar el lote.');
+      toast.success(`Se reencolaron ${data.requeued ?? 0} comprobantes para volver a consultar.`);
+      setRevalidateOpen(false);
+      await fetchItems();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al re-validar.');
+    } finally {
+      setRevalidating(false);
+    }
+  };
+
   const exportUrl = useMemo(() => {
     return (format: 'xlsx' | 'csv') => {
       const params = new URLSearchParams({ format });
@@ -163,6 +181,17 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
               <Button variant="outline" size="sm" onClick={retryFailed} disabled={retrying}>
                 <RotateCcw className={retrying ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
                 Reintentar fallidos
+              </Button>
+            )}
+            {isFinished && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRevalidateOpen(true)}
+                disabled={revalidating}
+              >
+                <RefreshCcwDot className={revalidating ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+                Volver a validar todo
               </Button>
             )}
             <Button variant="outline" size="sm" asChild>
@@ -251,6 +280,28 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
           onShowError={setErrorDetail}
         />
       </div>
+
+      <Dialog open={revalidateOpen} onOpenChange={(open) => !revalidating && setRevalidateOpen(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Volver a validar todo el lote</DialogTitle>
+            <DialogDescription>
+              Se volveran a consultar al SRI los {batch.totalValid.toLocaleString('es-EC')}{' '}
+              comprobantes de este lote. Los resultados actuales se reemplazaran por los nuevos.
+              Esto no consume validaciones adicionales de tu plan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setRevalidateOpen(false)} disabled={revalidating}>
+              Cancelar
+            </Button>
+            <Button onClick={revalidateAll} disabled={revalidating}>
+              {revalidating && <Loader2 className="animate-spin" />}
+              Volver a validar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={errorDetail !== null} onOpenChange={(open) => !open && setErrorDetail(null)}>
         <DialogContent>

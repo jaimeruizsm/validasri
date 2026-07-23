@@ -408,6 +408,37 @@ export class LocalRepository implements ValidaSriRepository {
     return count;
   }
 
+  async revalidateBatch(organizationId: string, batchId: string): Promise<number> {
+    const pending = this.get(
+      `SELECT COUNT(*) AS total FROM validation_items
+       WHERE organization_id = ? AND batch_id = ?`,
+      [organizationId, batchId],
+    );
+    const count = asInt(pending?.['total']);
+    if (count === 0) return 0;
+
+    const timestamp = nowIso();
+    // Se reencolan TODOS los items, limpiando el resultado anterior del SRI.
+    this.run(
+      `UPDATE validation_items
+       SET status = 'pending', attempt_count = 0, next_attempt_at = NULL, locked_at = NULL,
+           error_code = NULL, error_message = NULL, processed_at = NULL, sri_status_raw = NULL,
+           authorization_date = NULL, authorization_number = NULL, environment = NULL,
+           raw_response = NULL, updated_at = ?
+       WHERE organization_id = ? AND batch_id = ?`,
+      [timestamp, organizationId, batchId],
+    );
+    this.run(
+      `UPDATE validation_batches
+       SET status = 'queued', started_at = NULL, completed_at = NULL,
+           total_processed = 0, total_authorized = 0, total_annulled = 0,
+           total_not_authorized = 0, total_not_found = 0, total_errors = 0, updated_at = ?
+       WHERE organization_id = ? AND id = ?`,
+      [timestamp, organizationId, batchId],
+    );
+    return count;
+  }
+
   // ------------------------------------------------------------------
   // Cola del worker
   // ------------------------------------------------------------------

@@ -129,6 +129,8 @@ export interface ValidaSriRepository {
     batchId: string,
   ): Promise<Partial<Record<ItemStatus, number>>>;
   retryFailedItems(organizationId: string, batchId: string): Promise<number>;
+  /** Reencola TODOS los items del lote (no solo los fallidos) para re-consultarlos. */
+  revalidateBatch(organizationId: string, batchId: string): Promise<number>;
 
   // --- Worker (sin organizationId: opera sobre la cola global) ---
   claimPendingItems(limit: number): Promise<ClaimedItem[]>;

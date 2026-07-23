@@ -343,6 +343,52 @@ export class SupabaseRepository implements ValidaSriRepository {
     return count;
   }
 
+  async revalidateBatch(organizationId: string, batchId: string): Promise<number> {
+    // Se reencolan TODOS los items del lote, limpiando el resultado anterior del SRI.
+    const updated = checkRows(
+      await this.db
+        .from('validation_items')
+        .update({
+          status: 'pending',
+          attempt_count: 0,
+          next_attempt_at: null,
+          locked_at: null,
+          error_code: null,
+          error_message: null,
+          processed_at: null,
+          sri_status_raw: null,
+          authorization_date: null,
+          authorization_number: null,
+          environment: null,
+          raw_response: null,
+        })
+        .eq('organization_id', organizationId)
+        .eq('batch_id', batchId)
+        .select('id'),
+    );
+    const count = updated.length;
+    if (count === 0) return 0;
+
+    checkVoid(
+      await this.db
+        .from('validation_batches')
+        .update({
+          status: 'queued',
+          started_at: null,
+          completed_at: null,
+          total_processed: 0,
+          total_authorized: 0,
+          total_annulled: 0,
+          total_not_authorized: 0,
+          total_not_found: 0,
+          total_errors: 0,
+        })
+        .eq('organization_id', organizationId)
+        .eq('id', batchId),
+    );
+    return count;
+  }
+
   // ------------------------------------------------------------------
   // Cola del worker
   // ------------------------------------------------------------------

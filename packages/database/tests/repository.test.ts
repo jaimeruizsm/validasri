@@ -230,6 +230,34 @@ describe('LocalRepository', () => {
       expect(await repo.finalizePendingBatches()).not.toContain(batch.id);
     });
 
+    it('re-valida todo el lote: reencola todos los items y reinicia contadores', async () => {
+      const batch = await createBatch(orgA, 3);
+      for (const item of await repo.claimPendingItems(3)) {
+        await repo.recordItemResult(item.id, authorizedResult());
+      }
+      await repo.finalizePendingBatches();
+
+      const before = await repo.getBatch(orgA.organizationId, batch.id);
+      expect(before?.status).toBe('completed');
+      expect(before?.totalAuthorized).toBe(3);
+
+      const requeued = await repo.revalidateBatch(orgA.organizationId, batch.id);
+      expect(requeued).toBe(3);
+
+      const after = await repo.getBatch(orgA.organizationId, batch.id);
+      expect(after?.status).toBe('queued');
+      expect(after?.totalProcessed).toBe(0);
+      expect(after?.totalAuthorized).toBe(0);
+      expect(after?.completedAt).toBeNull();
+      // Todos vuelven a estar disponibles para el worker.
+      expect(await repo.claimPendingItems(10)).toHaveLength(3);
+    });
+
+    it('no re-valida un lote de otra organizacion', async () => {
+      const batch = await createBatch(orgA, 2);
+      expect(await repo.revalidateBatch(orgB.organizationId, batch.id)).toBe(0);
+    });
+
     it('reencola los fallidos y devuelve el lote a la cola', async () => {
       const batch = await createBatch(orgA, 2);
       const claimed = await repo.claimPendingItems(2);
