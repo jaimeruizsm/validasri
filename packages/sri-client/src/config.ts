@@ -6,10 +6,12 @@
 export type SriEnvironment = 'test' | 'production';
 export type SriProviderName = 'mock' | 'soap';
 
+// Servicio de autorizacion: devuelve el estado y ademas el XML firmado del
+// comprobante (razon social, nombre comercial, importe total, etc.).
 const DEFAULT_TEST_WSDL =
-  'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/ConsultaComprobante?wsdl';
+  'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
 const DEFAULT_PRODUCTION_WSDL =
-  'https://cel.sri.gob.ec/comprobantes-electronicos-ws/ConsultaComprobante?wsdl';
+  'https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
 
 const readEnv = (key: string, fallback: string): string => {
   const value = process.env[key];

@@ -19,14 +19,16 @@ import type { SriProvider, SriQueryResult } from './types';
  * cambio del servicio se absorba en este paquete.
  */
 
-const OPERATION = 'consultarEstadoAutorizacionComprobanteAsync';
+// Servicio de autorizacion offline: devuelve el estado y el XML firmado del
+// comprobante. Operacion `autorizacionComprobante`, parametro `claveAccesoComprobante`.
+const OPERATION = 'autorizacionComprobanteAsync';
 
 /** Forma minima del cliente generado por la libreria `soap`. */
 interface SoapClientLike {
   [operation: string]: unknown;
 }
 
-type SoapCall = (args: { claveAcceso: string }, options?: unknown) => Promise<unknown[]>;
+type SoapCall = (args: { claveAccesoComprobante: string }, options?: unknown) => Promise<unknown[]>;
 
 export interface SoapProviderOptions {
   wsdlUrl: string;
@@ -58,28 +60,6 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T
   } finally {
     if (timer) clearTimeout(timer);
   }
-};
-
-/**
- * Quita el XML completo del comprobante antes de guardar la respuesta: contiene
- * datos del contribuyente y no aporta a la auditoria del estado.
- */
-const trimRawResponse = (raw: unknown): unknown => {
-  const clone = JSON.parse(JSON.stringify(raw ?? null)) as unknown;
-  const strip = (node: unknown): void => {
-    if (Array.isArray(node)) {
-      node.forEach(strip);
-      return;
-    }
-    if (typeof node !== 'object' || node === null) return;
-    const record = node as Record<string, unknown>;
-    if (typeof record['comprobante'] === 'string') {
-      record['comprobante'] = '[omitido]';
-    }
-    Object.values(record).forEach(strip);
-  };
-  strip(clone);
-  return clone;
 };
 
 export class SoapSriProvider implements SriProvider {
@@ -118,12 +98,16 @@ export class SoapSriProvider implements SriProvider {
 
     try {
       const result = await withTimeout(
-        (call as SoapCall).call(client, { claveAcceso: accessKey }, { timeout: this.options.timeoutMs }),
+        (call as SoapCall).call(
+          client,
+          { claveAccesoComprobante: accessKey },
+          { timeout: this.options.timeoutMs },
+        ),
         this.options.timeoutMs,
       );
       const payload = Array.isArray(result) ? result[0] : result;
-      const normalized = normalizeSriResponse(accessKey, payload);
-      return { ...normalized, raw: trimRawResponse(payload) };
+      // Se conserva la respuesta completa (incluido el XML del comprobante).
+      return normalizeSriResponse(accessKey, payload);
     } catch (error) {
       // El contexto adjunto lleva la clave enmascarada: nunca la clave completa.
       const classified = classifyTransportError(error);

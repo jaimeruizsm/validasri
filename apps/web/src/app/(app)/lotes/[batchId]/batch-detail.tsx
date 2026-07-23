@@ -316,10 +316,20 @@ export function BatchDetail({ initialBatch }: { initialBatch: ValidationBatch })
               {errorDetail.sriStatusRaw && (
                 <DetailRow label="Respuesta del SRI" value={errorDetail.sriStatusRaw} />
               )}
+              {errorDetail.issuerName && (
+                <DetailRow label="Razon social del emisor" value={errorDetail.issuerName} />
+              )}
+              {errorDetail.tradeName && (
+                <DetailRow label="Nombre comercial" value={errorDetail.tradeName} />
+              )}
+              <DetailRow label="RUC del emisor" value={errorDetail.issuerRuc ?? '—'} />
               <DetailRow
                 label="Tipo de comprobante"
                 value={describeDocumentType(errorDetail.documentType)}
               />
+              {errorDetail.totalAmount && (
+                <DetailRow label="Importe total" value={errorDetail.totalAmount} />
+              )}
               {errorDetail.errorCode && <DetailRow label="Codigo" value={errorDetail.errorCode} />}
               {errorDetail.errorMessage && (
                 <DetailRow label="Observacion" value={errorDetail.errorMessage} />

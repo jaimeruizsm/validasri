@@ -10,7 +10,10 @@ export interface ExportRow {
   accessKey: string;
   status: string;
   issuerRuc: string;
+  issuerName: string;
+  tradeName: string;
   documentType: string;
+  totalAmount: string;
   authorizationDate: string;
   authorizationNumber: string;
   attempts: number;
@@ -22,7 +25,10 @@ export const EXPORT_HEADERS: Array<{ key: keyof ExportRow; header: string; width
   { key: 'accessKey', header: 'Clave de acceso', width: 52 },
   { key: 'status', header: 'Estado', width: 22 },
   { key: 'issuerRuc', header: 'RUC del emisor', width: 16 },
+  { key: 'issuerName', header: 'Razon social del emisor', width: 40 },
+  { key: 'tradeName', header: 'Nombre comercial', width: 28 },
   { key: 'documentType', header: 'Tipo de comprobante', width: 22 },
+  { key: 'totalAmount', header: 'Importe total', width: 14 },
   { key: 'authorizationDate', header: 'Fecha de autorizacion', width: 20 },
   { key: 'authorizationNumber', header: 'Numero de autorizacion', width: 40 },
   { key: 'attempts', header: 'Intentos', width: 10 },
@@ -34,7 +40,10 @@ export const toExportRow = (item: ValidationItem): ExportRow => ({
   accessKey: item.accessKey,
   status: ITEM_STATUS_LABELS[item.status],
   issuerRuc: item.issuerRuc ?? '',
+  issuerName: item.issuerName ?? '',
+  tradeName: item.tradeName ?? '',
   documentType: describeDocumentType(item.documentType),
+  totalAmount: item.totalAmount ?? '',
   authorizationDate: formatDateTimeEc(item.authorizationDate, ''),
   authorizationNumber: item.authorizationNumber ?? '',
   attempts: item.attemptCount,

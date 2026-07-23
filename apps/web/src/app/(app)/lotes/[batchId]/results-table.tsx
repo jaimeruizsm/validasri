@@ -56,15 +56,31 @@ export function ResultsTable({
       cell: ({ row }) => <ItemStatusBadge status={row.original.status} />,
     },
     {
-      header: 'RUC emisor',
+      header: 'Emisor',
       accessorKey: 'issuerRuc',
-      cell: ({ row }) => <span className="text-sm">{row.original.issuerRuc ?? '—'}</span>,
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-slate-800">
+            {row.original.issuerName ?? '—'}
+          </p>
+          <p className="text-xs text-slate-400">{row.original.issuerRuc ?? ''}</p>
+        </div>
+      ),
     },
     {
       header: 'Tipo',
       accessorKey: 'documentType',
       cell: ({ row }) => (
         <span className="text-sm">{describeDocumentType(row.original.documentType)}</span>
+      ),
+    },
+    {
+      header: 'Importe',
+      accessorKey: 'totalAmount',
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-sm tabular-nums">
+          {row.original.totalAmount ?? '—'}
+        </span>
       ),
     },
     {

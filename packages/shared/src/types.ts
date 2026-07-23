@@ -66,6 +66,12 @@ export interface ValidationItem {
   sriStatusRaw: string | null;
   documentType: string | null;
   issuerRuc: string | null;
+  /** Razon social del emisor (extraida del XML del comprobante). */
+  issuerName: string | null;
+  /** Nombre comercial del emisor. */
+  tradeName: string | null;
+  /** Importe total del comprobante, tal cual lo entrega el SRI. */
+  totalAmount: string | null;
   authorizationDate: string | null;
   authorizationNumber: string | null;
   environment: string | null;

@@ -483,7 +483,8 @@ export class LocalRepository implements ValidaSriRepository {
     this.run(
       `UPDATE validation_items SET
          status = ?, sri_status_raw = ?, document_type = COALESCE(?, document_type),
-         issuer_ruc = COALESCE(?, issuer_ruc), authorization_date = ?, authorization_number = ?,
+         issuer_ruc = COALESCE(?, issuer_ruc), issuer_name = ?, trade_name = ?, total_amount = ?,
+         authorization_date = ?, authorization_number = ?,
          environment = ?, error_code = ?, error_message = ?, raw_response = ?,
          attempt_count = attempt_count + 1, next_attempt_at = NULL, locked_at = NULL,
          processed_at = ?, updated_at = ?
@@ -493,6 +494,9 @@ export class LocalRepository implements ValidaSriRepository {
         result.sriStatusRaw,
         result.documentType,
         result.issuerRuc,
+        result.issuerName,
+        result.tradeName,
+        result.totalAmount,
         result.authorizationDate,
         result.authorizationNumber,
         result.environment,

@@ -90,7 +90,7 @@ describe('SoapSriProvider', () => {
       wsdlUrl: 'https://ejemplo.invalid/ws?wsdl',
       timeoutMs: 1_000,
       createClient: async () => ({
-        consultarEstadoAutorizacionComprobanteAsync: async (args: unknown) => {
+        autorizacionComprobanteAsync: async (args: unknown) => {
           receivedArgs = args;
           return [
             {
@@ -106,21 +106,28 @@ describe('SoapSriProvider', () => {
     });
 
     const result = await provider.consultarComprobante(KEY);
-    expect(receivedArgs).toEqual({ claveAcceso: KEY });
+    expect(receivedArgs).toEqual({ claveAccesoComprobante: KEY });
     expect(result.status).toBe('authorized');
   });
 
-  it('omite el XML del comprobante en la respuesta guardada', async () => {
+  it('conserva el XML del comprobante y extrae la razon social', async () => {
     const provider = new SoapSriProvider({
       wsdlUrl: 'https://ejemplo.invalid/ws?wsdl',
       timeoutMs: 1_000,
       createClient: async () => ({
-        consultarEstadoAutorizacionComprobanteAsync: async () => [
+        autorizacionComprobanteAsync: async () => [
           {
             RespuestaAutorizacionComprobante: {
               numeroComprobantes: '1',
               autorizaciones: {
-                autorizacion: [{ estado: 'AUTORIZADO', comprobante: '<factura>datos sensibles</factura>' }],
+                autorizacion: [
+                  {
+                    estado: 'AUTORIZADO',
+                    comprobante:
+                      '<factura><infoTributaria><razonSocial>ACME S.A.</razonSocial>' +
+                      '</infoTributaria><infoFactura><importeTotal>42.50</importeTotal></infoFactura></factura>',
+                  },
+                ],
               },
             },
           },
@@ -129,8 +136,10 @@ describe('SoapSriProvider', () => {
     });
 
     const result = await provider.consultarComprobante(KEY);
-    expect(JSON.stringify(result.raw)).not.toContain('datos sensibles');
-    expect(JSON.stringify(result.raw)).toContain('[omitido]');
+    expect(result.issuerName).toBe('ACME S.A.');
+    expect(result.totalAmount).toBe('42.50');
+    // El XML completo se conserva en la respuesta cruda.
+    expect(JSON.stringify(result.raw)).toContain('razonSocial');
   });
 
   it('convierte un fallo de red en un error temporal enmascarando la clave', async () => {
@@ -138,7 +147,7 @@ describe('SoapSriProvider', () => {
       wsdlUrl: 'https://ejemplo.invalid/ws?wsdl',
       timeoutMs: 1_000,
       createClient: async () => ({
-        consultarEstadoAutorizacionComprobanteAsync: async () => {
+        autorizacionComprobanteAsync: async () => {
           throw Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
         },
       }),
@@ -168,7 +177,7 @@ describe('SoapSriProvider', () => {
       wsdlUrl: 'https://ejemplo.invalid/ws?wsdl',
       timeoutMs: 30,
       createClient: async () => ({
-        consultarEstadoAutorizacionComprobanteAsync: () =>
+        autorizacionComprobanteAsync: () =>
           new Promise((resolve) => setTimeout(resolve, 5_000)),
       }),
     });

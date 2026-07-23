@@ -19,6 +19,12 @@ export interface SriQueryResult {
   sriStatusRaw: string | null;
   documentType: string | null;
   issuerRuc: string | null;
+  /** Razon social del emisor (del XML del comprobante). */
+  issuerName: string | null;
+  /** Nombre comercial del emisor. */
+  tradeName: string | null;
+  /** Importe total del comprobante. */
+  totalAmount: string | null;
   authorizationDate: string | null;
   authorizationNumber: string | null;
   environment: string | null;

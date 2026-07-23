@@ -1,4 +1,5 @@
 import { extractDocumentType, extractIssuerRuc, type ItemStatus } from '@validasri/shared';
+import { parseComprobanteXml } from './comprobante';
 import type { SriMessage, SriQueryResult } from './types';
 
 /**
@@ -119,6 +120,9 @@ export const normalizeSriResponse = (accessKey: string, response: unknown): SriQ
     accessKey,
     documentType: extractDocumentType(accessKey),
     issuerRuc: extractIssuerRuc(accessKey),
+    issuerName: null,
+    tradeName: null,
+    totalAmount: null,
     raw: response,
   };
 
@@ -167,11 +171,17 @@ export const normalizeSriResponse = (accessKey: string, response: unknown): SriQ
       .find((candidate) => candidate !== undefined) ?? candidates[0]!;
 
   const messages = normalizeMessages(firstDefined(chosen.entry, ['mensajes', 'messages']));
+  // El XML firmado del comprobante (cuando el servicio de autorizacion lo entrega)
+  // trae la razon social, el nombre comercial y el importe total.
+  const comprobante = parseComprobanteXml(firstDefined(chosen.entry, ['comprobante']));
 
   if (chosen.status === null) {
     // Estado desconocido: no se afirma un resultado que no se entiende.
     return {
       ...base,
+      issuerName: comprobante.issuerName,
+      tradeName: comprobante.tradeName,
+      totalAmount: comprobante.totalAmount,
       status: 'service_error',
       sriStatusRaw: chosen.sriStatusRaw,
       authorizationDate: toIsoDate(firstDefined(chosen.entry, ['fechaAutorizacion'])),
@@ -192,6 +202,9 @@ export const normalizeSriResponse = (accessKey: string, response: unknown): SriQ
 
   return {
     ...base,
+    issuerName: comprobante.issuerName,
+    tradeName: comprobante.tradeName,
+    totalAmount: comprobante.totalAmount,
     status: chosen.status,
     sriStatusRaw: chosen.sriStatusRaw,
     authorizationDate: toIsoDate(firstDefined(chosen.entry, ['fechaAutorizacion'])),

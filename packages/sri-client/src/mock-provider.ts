@@ -1,4 +1,4 @@
-import { extractDocumentType, extractIssuerRuc } from '@validasri/shared';
+import { extractIssuerRuc } from '@validasri/shared';
 import { SriServiceError } from './errors';
 import { normalizeSriResponse } from './normalizer';
 import type { SriProvider, SriQueryResult } from './types';
@@ -74,6 +74,15 @@ export class MockSriProvider implements SriProvider {
           }
         : null;
 
+    // XML minimo con los campos que la plataforma extrae (razon social, etc.),
+    // para que el proveedor simulado ejercite la misma ruta que el servicio real.
+    const comprobante =
+      `<factura><infoTributaria>` +
+      `<razonSocial>EMPRESA DEMOSTRACION S.A.</razonSocial>` +
+      `<nombreComercial>DEMO</nombreComercial>` +
+      `<ruc>${extractIssuerRuc(accessKey) ?? ''}</ruc>` +
+      `</infoTributaria><infoFactura><importeTotal>100.00</importeTotal></infoFactura></factura>`;
+
     return normalizeSriResponse(accessKey, {
       RespuestaAutorizacionComprobante: {
         claveAccesoConsultada: accessKey,
@@ -85,7 +94,7 @@ export class MockSriProvider implements SriProvider {
               numeroAutorizacion: accessKey,
               fechaAutorizacion: new Date('2026-07-22T15:00:00.000Z'),
               ambiente: 'PRUEBAS',
-              comprobante: `<!-- comprobante simulado tipo ${extractDocumentType(accessKey)} del RUC ${extractIssuerRuc(accessKey)} -->`,
+              comprobante,
               mensajes,
             },
           ],

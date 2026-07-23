@@ -75,6 +75,9 @@ export interface ItemResult {
   sriStatusRaw: string | null;
   documentType: string | null;
   issuerRuc: string | null;
+  issuerName: string | null;
+  tradeName: string | null;
+  totalAmount: string | null;
   authorizationDate: string | null;
   authorizationNumber: string | null;
   environment: string | null;

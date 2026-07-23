@@ -3,6 +3,7 @@ import { MockSriProvider } from './mock-provider';
 import { SoapSriProvider } from './soap-provider';
 import type { SriProvider } from './types';
 
+export * from './comprobante';
 export * from './config';
 export * from './errors';
 export * from './normalizer';
